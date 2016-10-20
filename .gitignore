@@ -8,6 +8,8 @@
 */project/boot
 project/.boot/
 project/.ivy/
+.sbtserver/
+project/.sbtserver
 */project/build/target
 */project/project.target.config-classes
 *-shim.sbt
@@ -46,3 +48,4 @@ tm*.log
 tm.out
 worker*.log
 /bin
+
