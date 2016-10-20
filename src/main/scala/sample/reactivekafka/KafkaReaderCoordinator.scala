@@ -9,16 +9,29 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+/**
+ *
+ */
 class KafkaReaderCoordinator(mat: Materializer, topicName: String) extends Actor with ActorLogging {
 
   implicit val materializer = mat
+
+  /**
+   * @todo is this needed? see [[initReader]] for another initialization
+   */
   var consumerWithOffsetSink: PublisherWithCommitSink[Array[Byte], CurrencyRateUpdated] = _
 
+  /**
+   *
+   */
   override def preStart(): Unit = {
     super.preStart()
     initReader()
   }
 
+  /**
+   *
+   */
   override def receive: Receive = {
     case Terminated(_) =>
       log.error("The consumer has been terminated, restarting the whole stream")
@@ -26,6 +39,9 @@ class KafkaReaderCoordinator(mat: Materializer, topicName: String) extends Actor
     case _ =>
   }
 
+  /**
+   *
+   */
   def initReader(): Unit = {
 
     implicit val actorSystem = context.system
@@ -42,12 +58,17 @@ class KafkaReaderCoordinator(mat: Materializer, topicName: String) extends Actor
     log.debug("Starting the reader")
 
     context.watch(consumerWithOffsetSink.publisherActor)
+
     Source.fromPublisher(consumerWithOffsetSink.publisher)
       .map(processMessage)
       .to(consumerWithOffsetSink.offsetCommitSink).run()
+
     context.parent ! "Reader initialized"
   }
 
+  /**
+   *
+   */
   def processMessage(msg: ConsumerRecord[Array[Byte], CurrencyRateUpdated]) = {
 
     val pairAndRate = msg.value()
@@ -57,12 +78,21 @@ class KafkaReaderCoordinator(mat: Materializer, topicName: String) extends Actor
     msg
   }
 
+  /**
+   *
+   */
   def saveMessageToDb(pairAndRate: CurrencyRateUpdated): Unit = {
     log.info(s"Exchange rate for ${pairAndRate.base}/${pairAndRate.counter} changed by ${pairAndRate.percentUpdate}%!")
   }
 
+  /**
+   *
+   */
   def alertTriggered(update: BigDecimal): Boolean = update.abs > 3
 
+  /**
+   *
+   */
   override def postStop(): Unit = {
     consumerWithOffsetSink.cancel()
     super.postStop()
