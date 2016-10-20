@@ -27,15 +27,20 @@ class KafkaReaderCoordinator(mat: Materializer, topicName: String) extends Actor
   }
 
   def initReader(): Unit = {
+
     implicit val actorSystem = context.system
+
     consumerWithOffsetSink = new ReactiveKafka().consumeWithOffsetSink(ConsumerProperties(
+
       bootstrapServers = "localhost:9092",
       topic = topicName,
       "group",
       CurrencyRateUpdatedDeserializer
-    )
-      .commitInterval(1200 milliseconds))
+
+    ).commitInterval(1200 milliseconds))
+
     log.debug("Starting the reader")
+
     context.watch(consumerWithOffsetSink.publisherActor)
     Source.fromPublisher(consumerWithOffsetSink.publisher)
       .map(processMessage)
@@ -44,6 +49,7 @@ class KafkaReaderCoordinator(mat: Materializer, topicName: String) extends Actor
   }
 
   def processMessage(msg: ConsumerRecord[Array[Byte], CurrencyRateUpdated]) = {
+
     val pairAndRate = msg.value()
     if (alertTriggered(pairAndRate.percentUpdate)) {
       saveMessageToDb(pairAndRate)
